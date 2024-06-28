@@ -1,5 +1,4 @@
 @page "/todo"
-
 @using global::ToDoList.App
 @using global::ToDoList.DTO
 @inject LocalStorageAccessor LocalStorageAccessor
@@ -9,10 +8,14 @@
 
 <h1>Todo</h1>
 @foreach(TodoTask item in tasks) {
-    <p><input type="checkbox" @bind="item.IsComplete" @onclick="SaveAsync" /> @item</p>
+    <p>
+        <input type="checkbox" @bind="item.IsComplete" @onclick="@(task => SaveAsync(item))" /> @item
+        <button class="btn btn-secondary" @onclick="@(async () => await DeleteTaskAsync(item))">Delete</button>
+    </p>
 }
-<input type="text" @bind="TaskText" />
+<input type="text"value="@TaskText" @oninput="(e) => TaskText = e.Value.ToString()" @onkeydown="HandleKeyDown" /> 
 <button class="btn btn-primary" @onclick="AddTaskAsync">Add</button>
+
 
 @code {
     private List<TodoTask> tasks = new();
@@ -25,15 +28,30 @@
         }
     }
 
-    private async Task SaveAsync() {
-        // ESTO TA FEO, NO HACER
-        await Task.Delay(1);
-        await LocalStorageAccessor.SetValueAsync<List<TodoTask>>("todos", tasks);
+    private async Task SaveAsync(TodoTask task) {
+        
+        await Http.PutAsJsonAsync($"http://localhost:5238/api/TodoItems/{task.Id}", task);
     }
 
     private async Task AddTaskAsync() {
-        tasks.Add(new TodoTask { Name = TaskText });
-        await LocalStorageAccessor.SetValueAsync<List<TodoTask>>("todos", tasks);
+
+        if (string.IsNullOrWhiteSpace(TaskText)) return;
+
+        var tasker = new TodoTask { Name = TaskText };
+        var response = await Http.PostAsJsonAsync("http://localhost:5238/api/TodoItems", tasker);
+        tasker = await response.Content.ReadFromJsonAsync<TodoTask>();
+        tasks.Add(tasker);
         TaskText = "";
+    }
+
+    private async Task DeleteTaskAsync(TodoTask task) {
+        tasks.Remove(task);
+        await Http.DeleteAsync($"http://localhost:5238/api/TodoItems/{task.Id}");
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e) {
+        if (e.Key == "Enter") {
+            await AddTaskAsync();
+        }
     }
 }
