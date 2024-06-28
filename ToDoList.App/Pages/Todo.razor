@@ -15,7 +15,7 @@
 }
 <input type="text"value="@TaskText" @oninput="(e) => TaskText = e.Value.ToString()" @onkeydown="HandleKeyDown" /> 
 <button class="btn btn-primary" @onclick="AddTaskAsync">Add</button>
-
+<button class="btn btn-danger" @onclick="DeleteAllTasksAsync">Eliminar Todo</button>
 
 @code {
     private List<TodoTask> tasks = new();
@@ -47,6 +47,13 @@
     private async Task DeleteTaskAsync(TodoTask task) {
         tasks.Remove(task);
         await Http.DeleteAsync($"http://localhost:5238/api/TodoItems/{task.Id}");
+    }
+
+    private async Task DeleteAllTasksAsync() {
+        foreach (var task in tasks.ToList()) {
+            await DeleteTaskAsync(task);
+        }
+        tasks.Clear();
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e) {
